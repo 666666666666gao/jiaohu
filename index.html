@@ -993,7 +993,48 @@
             checkMobileUI();
         }
 
+        // 生成"上岸"文字的粒子位置
+        function generateShoreTextPoints() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const width = 800;
+            const height = 400;
+            canvas.width = width;
+            canvas.height = height;
+            
+            // 绘制文字
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 200px "Microsoft YaHei", "微软雅黑", "SimHei", "黑体", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('上岸', width / 2, height / 2);
+            
+            // 获取像素数据
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const points = [];
+            const step = 2; // 采样步长，控制粒子密度
+            
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    const idx = (y * width + x) * 4;
+                    if (data[idx] > 30) { // 如果像素是白色（文字部分）
+                        // 转换为3D坐标
+                        const px = (x / width - 0.5) * 35; // 缩放并居中
+                        const py = -(y / height - 0.5) * 20; // Y轴翻转并缩放
+                        const pz = (Math.random() - 0.5) * 0.5; // 添加少量Z轴随机
+                        points.push({ x: px, y: py, z: pz });
+                    }
+                }
+            }
+            
+            return points.length > 0 ? points : [{ x: 0, y: 0, z: 0 }]; // 如果没找到点，返回默认点
+        }
+
         function createMainParticles() {
+            // 预生成"上岸"文字点集
+            const shoreTextPoints = generateShoreTextPoints();
+            
             const geometry = new THREE.BufferGeometry();
             const posArray = new Float32Array(count * 3);
             const targetGalaxy = new Float32Array(count * 3);
@@ -1019,14 +1060,12 @@
                 const mX = (mR + ms * Math.cos(mt/2)) * Math.cos(mt); const mY = (mR + ms * Math.cos(mt/2)) * Math.sin(mt); const mZ = ms * Math.sin(mt/2);
                 const mobiusScatter = (Math.random() - 0.5) * 3.0 * Math.pow(Math.random(), 2);
                 targetMobius[i3] = mX + mobiusScatter; targetMobius[i3+1] = mY + mobiusScatter; targetMobius[i3+2] = mZ + mobiusScatter;
-                // 上岸模式：从底部向上扩散的波浪效果
-                const shoreAngle = Math.random() * Math.PI * 2;
-                const shoreRadius = Math.random() * 15;
-                const shoreHeight = Math.pow(Math.random(), 1.5) * 20 - 10; // 从底部(-10)向上扩散
-                const waveOffset = Math.sin(shoreAngle * 3) * 2; // 波浪效果
-                targetShore[i3] = Math.cos(shoreAngle) * shoreRadius + waveOffset;
-                targetShore[i3+1] = shoreHeight;
-                targetShore[i3+2] = Math.sin(shoreAngle) * shoreRadius + waveOffset;
+                // 上岸模式：从文字形状的粒子分布
+                const shorePoint = shoreTextPoints[Math.floor(Math.random() * shoreTextPoints.length)];
+                const scatter = (Math.random() - 0.5) * 0.3; // 少量随机散布
+                targetShore[i3] = shorePoint.x + scatter;
+                targetShore[i3+1] = shorePoint.y + scatter;
+                targetShore[i3+2] = shorePoint.z + scatter;
                 targetCustom[i3] = targetGalaxy[i3]; targetCustom[i3+1] = targetGalaxy[i3+1]; targetCustom[i3+2] = targetGalaxy[i3+2];
                 mixRatios[i] = Math.min(r / 20, 1.0); sizes[i] = Math.random();
                 randomness[i3] = (Math.random()-0.5) * 2; randomness[i3+1] = (Math.random()-0.5) * 2; randomness[i3+2] = (Math.random()-0.5) * 2;
@@ -1061,10 +1100,6 @@
                     void main() {
                         vColor = mix(uColorInside, uColorOutside, mixRatio);
                         vec3 pos = targetGalaxy * uWeightGalaxy + targetTesseract * uWeightTesseract + targetMobius * uWeightMobius + targetShore * uWeightShore + targetCustom * uWeightCustom;
-                        // 上岸模式：添加波浪动画
-                        if (uWeightShore > 0.5) {
-                            pos.y += sin(pos.x * 0.3 + uTime * 2.0) * 1.5 + sin(pos.z * 0.3 + uTime * 1.5) * 1.0;
-                        }
                         float spreadDist = length(randomness);
                         vec3 spreadOffset = randomness * pow(spreadDist, 4.0) * uSpread * 10.0; 
                         pos += spreadOffset;
