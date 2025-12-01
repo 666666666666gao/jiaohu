@@ -809,6 +809,15 @@
                 if(!isMobile) btn.innerText = "📷 运行中";
                 if(isMobile) btn.innerText = "📷 交互";
                 
+                // 设置初始扩散状态
+                smoothedOpenness = 1.0;
+                if(material) {
+                    material.uniforms.uSpread.value = smoothedOpenness * 1.5;
+                    material.uniforms.uChaos.value = smoothedOpenness * 0.5;
+                }
+                document.getElementById('spread-slider').value = smoothedOpenness * 1.5;
+                document.getElementById('chaos-slider').value = smoothedOpenness * 0.5;
+                
                 initMediaPipe();
                 updateStatus("摄像头已启动", "#00ffaa");
 
@@ -833,6 +842,15 @@
             const isMobile = window.innerWidth <= 850;
             if (!isMobile) btn.innerText = "👆 触屏控制";
             // 手机端文案保持不变
+            
+            // 设置初始扩散状态
+            smoothedOpenness = 1.0;
+            if(material) {
+                material.uniforms.uSpread.value = smoothedOpenness * 1.5;
+                material.uniforms.uChaos.value = smoothedOpenness * 0.5;
+            }
+            document.getElementById('spread-slider').value = smoothedOpenness * 1.5;
+            document.getElementById('chaos-slider').value = smoothedOpenness * 0.5;
             
             if(controls) controls.autoRotate = false;
             updateStatus("模式：触屏模拟", "#00ffaa");
